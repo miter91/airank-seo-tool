@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  plan          Plan      @default(FREE)
+  stripeCustomerId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  analyses      Analysis[]
+}
+
+model Analysis {
+  id            String    @id @default(cuid())
+  url           String
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  
+  seoScore      Int
+  aiScore       Int
+  overallScore  Int
+  
+  technicalSeo  Json
+  onPageSeo     Json
+  aiOptimization Json
+  recommendations Json
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([url])
+}
+
+enum Plan {
+  FREE
+  PRO
+  AGENCY
+  LIFETIME
+}
