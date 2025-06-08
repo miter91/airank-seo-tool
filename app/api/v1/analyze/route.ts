@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
         onPageSeo: {
           title: analysis.title,
           metaDescription: analysis.metaDescription,
-          h1: analysis.h1
+          h1: analysis.h1,
+          h2Count: analysis.h2Count,
+          imageStats: analysis.imageStats,
+          linkStats: analysis.linkStats
         },
         aiOptimization: {},
         recommendations: [...analysis.issues, ...analysis.suggestions]
