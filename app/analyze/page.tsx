@@ -49,11 +49,18 @@ export default function AnalyzePage() {
         body: JSON.stringify({ url })
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Analysis failed')
+        if (response.status === 429) {
+          // Rate limit error
+          setError(data.error || 'Rate limit exceeded. Free users can analyze 3 websites per day.')
+        } else {
+          throw new Error(data.error || 'Analysis failed')
+        }
+        return
       }
 
-      const data = await response.json()
       setResult(data)
     } catch (err) {
       setError('Failed to analyze website. Please check the URL and try again.')
@@ -82,6 +89,16 @@ export default function AnalyzePage() {
           <h1 className="text-4xl font-bold mb-4">SEO & AI Analyzer</h1>
           <p className="text-gray-600">
             Get instant insights on how to improve your website for both traditional search engines and AI-powered search
+          </p>
+        </div>
+
+        {/* Rate Limit Display */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center">
+          <p className="text-blue-800">
+            <span className="font-semibold">Free Plan:</span> 3 analyses per day
+          </p>
+          <p className="text-sm text-blue-600 mt-1">
+            Upgrade to Pro for unlimited analyses
           </p>
         </div>
         
