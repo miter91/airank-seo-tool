@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.53.0",
+    "@auth/prisma-adapter": "^2.9.1",
     "@prisma/client": "^6.9.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
@@ -24,10 +25,12 @@
     "lucide-react": "^0.513.0",
     "next": "15.3.3",
     "next-auth": "^4.24.11",
+    "nodemailer": "^6.10.1",
     "prisma": "^6.9.0",
     "puppeteer": "^24.10.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sonner": "^2.0.5",
     "stripe": "^18.2.1",
     "tailwind-merge": "^3.3.0",
     "zod": "^3.25.56"
@@ -37,6 +40,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/cheerio": "^0.22.35",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
