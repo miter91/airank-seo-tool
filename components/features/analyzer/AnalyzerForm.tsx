@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AnalyzerFormProps {
@@ -11,6 +11,10 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [usageInfo, setUsageInfo] = useState<{
+    remaining: number | string;
+    limit: number | string;
+  } | null>(null);
   const { user, isAuthenticated } = useAuth();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,23 +35,47 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
         body: JSON.stringify({ url })
       });
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Analysis failed');
+        if (response.status === 429) {
+          setError(data.error || 'Rate limit exceeded. Sign in for unlimited analyses.');
+          // Update usage info from error response
+          if (data.remaining !== undefined) {
+            setUsageInfo({
+              remaining: data.remaining,
+              limit: data.limit
+            });
+          }
+        } else {
+          throw new Error(data.error || 'Analysis failed');
+        }
+        return;
       }
       
-      const result = await response.json();
+      // Update usage info from successful response
+      if (data.rateLimit) {
+        setUsageInfo({
+          remaining: data.rateLimit.remaining,
+          limit: data.rateLimit.limit
+        });
+      }
       
-      // ADD THIS DEBUG LINE
-      // console.log('API Response:', result);
-      
-      onAnalysisComplete(result);
+      onAnalysisComplete(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
     }
   };
+  
+  // Get usage info when component mounts or auth changes
+  useEffect(() => {
+    if (!isAuthenticated && usageInfo === null) {
+      // You could make an API call here to get current usage
+      // For now, we'll just set it after first analysis
+    }
+  }, [isAuthenticated]);
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -79,19 +107,50 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
         </div>
         
         {error && (
-          <div className="text-red-600 text-sm">{error}</div>
+          <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+            {error}
+          </div>
         )}
         
         <div className="text-sm text-gray-500">
           {isAuthenticated ? (
-            <p>Welcome back, {user?.email}! You have unlimited analyses.</p>
+            <div>
+              <p>Welcome back, {user?.email}!</p>
+              <p className="text-green-600 font-semibold">✨ Unlimited analyses available</p>
+            </div>
           ) : (
-            <p>
-              Free users: 3 analyses per day • 
-              <a href="/auth/signin" className="text-blue-600 hover:underline ml-1">
-                Sign in for unlimited
-              </a>
-            </p>
+            <div>
+              <p>
+                Free users: 3 analyses per day • 
+                <a href="/auth/signin" className="text-blue-600 hover:underline ml-1">
+                  Sign in for unlimited
+                </a>
+              </p>
+              {usageInfo && typeof usageInfo.remaining === 'number' && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Usage today:</span>
+                    <div className="flex gap-1">
+                      {[...Array(3)].map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                            i < (3 - usageInfo.remaining)
+                              ? 'bg-gray-300 text-gray-500'
+                              : 'bg-green-500 text-white'
+                          }`}
+                        >
+                          {i + 1}
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-sm">
+                      ({usageInfo.remaining} {usageInfo.remaining === 1 ? 'analysis' : 'analyses'} left)
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </form>
