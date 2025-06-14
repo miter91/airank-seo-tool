@@ -1,13 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AnalyzerForm } from '@/components/features/analyzer/AnalyzerForm';
 import { ResultsDisplay } from '@/components/features/analyzer/ResultsDisplay';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AnalyzePage() {
   const [result, setResult] = useState<any>(null);
-  
+  const [prefillUrl, setPrefillUrl] = useState<string>('');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Get URL parameter for pre-filling
+    const urlParam = searchParams.get('url');
+    if (urlParam) {
+      setPrefillUrl(urlParam);
+    }
+  }, [searchParams]);
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="text-center mb-8">
@@ -18,7 +29,7 @@ export default function AnalyzePage() {
           Get instant insights on how to rank in both Google and AI search results
         </p>
       </div>
-      
+
       <AnimatePresence mode="wait">
         {!result ? (
           <motion.div
@@ -28,7 +39,10 @@ export default function AnalyzePage() {
             exit={{ opacity: 0, y: -20 }}
             className="max-w-2xl mx-auto"
           >
-            <AnalyzerForm onAnalysisComplete={setResult} />
+            <AnalyzerForm 
+              onAnalysisComplete={setResult} 
+              prefillUrl={prefillUrl}
+            />
           </motion.div>
         ) : (
           <motion.div

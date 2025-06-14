@@ -2,44 +2,62 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { UpgradePrompt } from '@/components/features/billing/UpgradePrompt';
 
 interface AnalyzerFormProps {
   onAnalysisComplete: (result: any) => void;
+  prefillUrl?: string;
 }
 
-export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
+export function AnalyzerForm({ onAnalysisComplete, prefillUrl = '' }: AnalyzerFormProps) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [usageInfo, setUsageInfo] = useState<{
     remaining: number | string;
     limit: number | string;
   } | null>(null);
   const { user, isAuthenticated } = useAuth();
-  
+
+  // Set prefill URL when component mounts or prefillUrl changes
+  useEffect(() => {
+    if (prefillUrl) {
+      setUrl(prefillUrl);
+    }
+  }, [prefillUrl]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+    setShowUpgrade(false);
+
     if (!url) {
       setError('Please enter a URL');
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const response = await fetch('/api/v1/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         if (response.status === 429) {
-          setError(data.error || 'Rate limit exceeded. Sign in for unlimited analyses.');
+          // Rate limit hit - show upgrade prompt for free users
+          if (!isAuthenticated) {
+            setShowUpgrade(true);
+            setError(''); // Clear error since we're showing upgrade prompt
+          } else {
+            setError(data.error || 'Rate limit exceeded');
+          }
+          
           // Update usage info from error response
           if (data.remaining !== undefined) {
             setUsageInfo({
@@ -52,7 +70,7 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
         }
         return;
       }
-      
+
       // Update usage info from successful response
       if (data.rateLimit) {
         setUsageInfo({
@@ -60,7 +78,7 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
           limit: data.rateLimit.limit
         });
       }
-      
+
       onAnalysisComplete(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
@@ -68,15 +86,27 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
       setLoading(false);
     }
   };
-  
-  // Get usage info when component mounts or auth changes
-  useEffect(() => {
-    if (!isAuthenticated && usageInfo === null) {
-      // You could make an API call here to get current usage
-      // For now, we'll just set it after first analysis
-    }
-  }, [isAuthenticated]);
-  
+
+  // If showing upgrade prompt, render it instead of the form
+  if (showUpgrade) {
+    return (
+      <div className="space-y-6">
+        <UpgradePrompt 
+          message="You've used all 3 free analyses today! Upgrade to Pro for unlimited analyses and advanced features."
+          onUpgrade={() => setShowUpgrade(false)}
+        />
+        <div className="text-center">
+          <button
+            onClick={() => setShowUpgrade(false)}
+            className="text-blue-600 hover:underline text-sm"
+          >
+            ← Back to analyzer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +116,7 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
             Get instant SEO and AI optimization scores
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           <input
             type="url"
@@ -105,13 +135,13 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
             {loading ? 'Analyzing...' : 'Analyze'}
           </button>
         </div>
-        
+
         {error && (
           <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
             {error}
           </div>
         )}
-        
+
         <div className="text-sm text-gray-500">
           {isAuthenticated ? (
             <div>
@@ -121,7 +151,7 @@ export function AnalyzerForm({ onAnalysisComplete }: AnalyzerFormProps) {
           ) : (
             <div>
               <p>
-                Free users: 3 analyses per day • 
+                Free users: 3 analyses per day •
                 <a href="/auth/signin" className="text-blue-600 hover:underline ml-1">
                   Sign in for unlimited
                 </a>
